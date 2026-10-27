@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '../types.ts';
+import { User, ExamineeLoginResult } from '../types.ts';
 import api from '../lib/api.ts';
 
 interface AuthContextType {
@@ -7,6 +7,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password?: string) => Promise<void>;
+  examineeLogin: (studentId: string) => Promise<ExamineeLoginResult>;
   register: (data: any) => Promise<void>;
   logout: () => void;
   quickSwitchAccount: (email: string) => Promise<void>;
@@ -55,6 +56,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const examineeLogin = async (studentId: string): Promise<ExamineeLoginResult> => {
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/examinee-login', { studentId });
+      const result: ExamineeLoginResult = res.data;
+      if (result.approved && result.token && result.user) {
+        localStorage.setItem('sltc_token', result.token);
+        setToken(result.token);
+        setUser(result.user);
+      }
+      return result;
+    } catch (err: any) {
+      throw new Error(err.response?.data?.error || 'Examinee verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const register = async (data: any) => {
     setLoading(true);
     try {
@@ -91,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, quickSwitchAccount, refreshProfile }}>
+    <AuthContext.Provider value={{ user, token, loading, login, examineeLogin, register, logout, quickSwitchAccount, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

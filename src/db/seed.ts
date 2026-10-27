@@ -1,10 +1,11 @@
-import { db, createPool } from './index.ts';
-import { users, categories, topics, questions, questionChoices, examinations, examQuestions, auditLogs, examAttempts, examineeAnswers } from './schema.ts';
+import { db, createPool, initDatabaseSchema } from './index.ts';
+import { users, categories, topics, questions, questionChoices, examinations, examQuestions, auditLogs, examAttempts, examineeAnswers, studentMasterlist, examRequests } from './schema.ts';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 
 export async function seedDatabase() {
   try {
+    await initDatabaseSchema();
     console.log('Checking database seeding status...');
 
     // Ensure columns exist
@@ -103,7 +104,7 @@ export async function seedDatabase() {
         passwordHash: studentHash,
         fullName: 'Ana Clara Reyes (Examinee)',
         role: 'EXAMINEE',
-        studentId: '2022-SLTC-0841',
+        studentId: 'SLPD-2022-COL-0841',
         majorSubject: 'General Education',
         yearLevel: '4th Year BSED',
         contactNumber: '09171234567',
@@ -112,6 +113,12 @@ export async function seedDatabase() {
       adminUser = existingUsers.find(u => u.role === 'ADMIN') || existingUsers[0];
       facultyUser = existingUsers.find(u => u.role === 'FACULTY') || existingUsers[0];
       examineeUser = existingUsers.find(u => u.role === 'EXAMINEE') || existingUsers[0];
+
+      // Auto-migrate legacy format if present
+      if (examineeUser && examineeUser.studentId === '2022-SLTC-0841') {
+        await db.update(users).set({ studentId: 'SLPD-2022-COL-0841' }).where(eq(users.id, examineeUser.id));
+        examineeUser.studentId = 'SLPD-2022-COL-0841';
+      }
     }
 
     // 3. Check Questions
@@ -277,7 +284,117 @@ export async function seedDatabase() {
         details: 'Initial database seeding for SLTCFPDI LET Mock Examination system successfully executed.',
       });
 
+      // Seed official student masterlist
+      console.log('Seeding official student masterlist...');
+      await db.insert(studentMasterlist).values([
+        {
+          studentId: 'SLPD-2022-COL-0841',
+          lastName: 'Reyes',
+          firstName: 'Ana Clara',
+          middleName: 'Morales',
+          course: 'BEED General Education',
+          yearGraduated: '2025',
+          uploadedById: facultyUser.id,
+        },
+        {
+          studentId: 'SLPD-2024-COL-0190',
+          lastName: 'Gomez',
+          firstName: 'Elena Marie',
+          middleName: 'Castro',
+          course: 'BSED Major in English',
+          yearGraduated: '2026',
+          uploadedById: facultyUser.id,
+        },
+        {
+          studentId: 'SLPD-2023-COL-0112',
+          lastName: 'Bautista',
+          firstName: 'John Mark',
+          middleName: 'Salazar',
+          course: 'BSED Major in English',
+          yearGraduated: '2026',
+          uploadedById: facultyUser.id,
+        },
+        {
+          studentId: 'SLPD-2023-COL-0245',
+          lastName: 'Cruz',
+          firstName: 'Rochelle',
+          middleName: 'Pascual',
+          course: 'BSED Major in Mathematics',
+          yearGraduated: '2026',
+          uploadedById: adminUser.id,
+        },
+        {
+          studentId: 'SLPD-2024-COL-0309',
+          lastName: 'Mendoza',
+          firstName: 'Carlo',
+          middleName: 'Dizon',
+          course: 'BSED Major in Science',
+          yearGraduated: '2026',
+          uploadedById: facultyUser.id,
+        },
+        {
+          studentId: 'SLPD-2024-COL-0418',
+          lastName: 'Santos',
+          firstName: 'Katrina',
+          middleName: 'Luna',
+          course: 'BEED Early Childhood Education',
+          yearGraduated: '2026',
+          uploadedById: adminUser.id,
+        },
+      ]);
+
+      // Seed initial exam clearance request for the demo examinee
+      await db.insert(examRequests).values({
+        userId: examineeUser.id,
+        studentId: examineeUser.studentId || 'SLPD-2022-COL-0841',
+        examId: mockExam1.id,
+        status: 'APPROVED',
+        requestNotes: 'Official clearance request for Pre-Board MockLET batch 2026.',
+        reviewNotes: 'Verified official graduating student in masterlist. Approved for pre-board mock examination.',
+        reviewedById: adminUser.id,
+        reviewedAt: new Date(),
+      });
+
       console.log('Database seeded successfully!');
+    }
+
+    // Ensure SLPD-2024-COL-0190 is present in masterlist even if database was previously seeded
+    const existing0190 = await db.select().from(studentMasterlist).where(eq(studentMasterlist.studentId, 'SLPD-2024-COL-0190'));
+    if (existing0190.length === 0) {
+      await db.insert(studentMasterlist).values({
+        studentId: 'SLPD-2024-COL-0190',
+        lastName: 'Gomez',
+        firstName: 'Elena Marie',
+        middleName: 'Castro',
+        course: 'BSED Major in English',
+        yearGraduated: '2026',
+        uploadedById: 2,
+      });
+    }
+
+    // Ensure legacy IDs in studentMasterlist are migrated to SLPD format
+    const allMaster = await db.select().from(studentMasterlist);
+    for (const record of allMaster) {
+      if (record.studentId.includes('SLTC')) {
+        const parts = record.studentId.split('-');
+        // 2022-SLTC-0841 -> SLPD-2022-COL-0841
+        if (parts.length === 3) {
+          const newId = `SLPD-${parts[0]}-COL-${parts[2]}`;
+          await db.update(studentMasterlist).set({ studentId: newId }).where(eq(studentMasterlist.id, record.id));
+        }
+      }
+    }
+
+    // Ensure legacy IDs in examRequests are migrated to SLPD format
+    const allReqs = await db.select().from(examRequests);
+    for (const reqRecord of allReqs) {
+      if (reqRecord.studentId.includes('SLTC')) {
+        const parts = reqRecord.studentId.split('-');
+        if (parts.length === 3) {
+          const newId = `SLPD-${parts[0]}-COL-${parts[2]}`;
+          await db.update(examRequests).set({ studentId: newId }).where(eq(examRequests.id, reqRecord.id));
+        }
+      }
     }
   } catch (error) {
     console.error('Error seeding database:', error);

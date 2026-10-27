@@ -8,6 +8,8 @@ import questionRoutes from './src/server/questionRoutes.ts';
 import examRoutes from './src/server/examRoutes.ts';
 import analyticsRoutes from './src/server/analyticsRoutes.ts';
 import reportRoutes from './src/server/reportRoutes.ts';
+import studentRoutes from './src/server/studentRoutes.ts';
+import examRequestRoutes from './src/server/examRequestRoutes.ts';
 
 async function startServer() {
   const app = express();
@@ -31,6 +33,8 @@ async function startServer() {
   app.use('/api/exams', examRoutes);
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/reports', reportRoutes);
+  app.use('/api/students', studentRoutes);
+  app.use('/api/exam-requests', examRequestRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {

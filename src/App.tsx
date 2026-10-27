@@ -9,6 +9,8 @@ import { QuestionBankManager } from './components/QuestionBankManager.tsx';
 import { ExamManager } from './components/ExamManager.tsx';
 import { UserManager } from './components/UserManager.tsx';
 import { ReportsView } from './components/ReportsView.tsx';
+import { StudentMasterlistManager } from './components/StudentMasterlistManager.tsx';
+import { ExamRequestManager } from './components/ExamRequestManager.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
 import { GraduationCap, BookOpen, ShieldCheck, RefreshCw } from 'lucide-react';
 
@@ -21,11 +23,11 @@ const MainAppContent: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
-  // Guard for examinees: examinee must ONLY view mock exams list & taking interface
+  // Guard for examinees: examinee can view dashboard, exams list & taking interface
   React.useEffect(() => {
     if (user?.role === 'EXAMINEE') {
-      if (activeTab !== 'exams' && activeTab !== 'taking-exam') {
-        setActiveTab('exams');
+      if (activeTab !== 'exams' && activeTab !== 'taking-exam' && activeTab !== 'dashboard') {
+        setActiveTab('dashboard');
       }
     }
   }, [user, activeTab]);
@@ -107,15 +109,29 @@ const MainAppContent: React.FC = () => {
           <>
             {activeTab === 'dashboard' && (
               user?.role === 'EXAMINEE' ? (
-                <ExamManager onTakeExam={handleTakeExam} />
+                <ExamineeDashboard
+                  onTakeExam={handleTakeExam}
+                  onReviewAttempt={handleReviewAttempt}
+                  onNavigateToExams={() => setActiveTab('exams')}
+                />
               ) : (
                 <FacultyAdminDashboard
                   onNavigateToQuestions={() => setActiveTab('questions')}
                   onNavigateToExams={() => setActiveTab('exams')}
                   onNavigateToUsers={() => setActiveTab('users')}
                   onNavigateToReports={() => setActiveTab('reports')}
+                  onNavigateToStudents={() => setActiveTab('students')}
+                  onNavigateToClearance={() => setActiveTab('clearance')}
                 />
               )
+            )}
+
+            {activeTab === 'students' && (user?.role === 'ADMIN' || user?.role === 'FACULTY') && (
+              <StudentMasterlistManager />
+            )}
+
+            {activeTab === 'clearance' && (user?.role === 'ADMIN' || user?.role === 'FACULTY') && (
+              <ExamRequestManager />
             )}
 
             {activeTab === 'exams' && (

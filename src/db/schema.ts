@@ -9,7 +9,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
   fullName: text('full_name').notNull(),
   role: text('role').notNull().default('EXAMINEE'), // 'ADMIN', 'FACULTY', 'EXAMINEE'
-  studentId: text('student_id'),
+  studentId: text('student_id').unique(),
   department: text('department').default('College of Education'),
   majorSubject: text('major_subject').default('General Education'), // e.g., 'English', 'Mathematics', 'General Education'
   yearLevel: text('year_level').default('4th Year'),
@@ -122,12 +122,52 @@ export const auditLogs = pgTable('audit_logs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// 11. Student Masterlist (Official Excel Upload)
+export const studentMasterlist = pgTable('student_masterlist', {
+  id: serial('id').primaryKey(),
+  studentId: text('student_id').notNull().unique(),
+  lastName: text('last_name').notNull(),
+  firstName: text('first_name').notNull(),
+  middleName: text('middle_name'),
+  course: text('course').notNull(),
+  yearGraduated: text('year_graduated').notNull(),
+  uploadedById: integer('uploaded_by_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 12. Exam Requests (MockLET Clearance Approvals)
+export const examRequests = pgTable('exam_requests', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  studentId: text('student_id').notNull(),
+  examId: integer('exam_id').references(() => examinations.id, { onDelete: 'set null' }),
+  status: text('status').default('PENDING').notNull(), // 'PENDING', 'APPROVED', 'DECLINED'
+  requestNotes: text('request_notes'),
+  reviewNotes: text('review_notes'),
+  reviewedById: integer('reviewed_by_id').references(() => users.id, { onDelete: 'set null' }),
+  requestedAt: timestamp('requested_at').defaultNow().notNull(),
+  reviewedAt: timestamp('reviewed_at'),
+});
+
 // RELATIONS
 export const usersRelations = relations(users, ({ many }) => ({
   attempts: many(examAttempts),
   createdQuestions: many(questions),
   createdExams: many(examinations),
   logs: many(auditLogs),
+  uploadedStudents: many(studentMasterlist),
+  examRequests: many(examRequests),
+}));
+
+export const studentMasterlistRelations = relations(studentMasterlist, ({ one }) => ({
+  uploadedBy: one(users, { fields: [studentMasterlist.uploadedById], references: [users.id] }),
+}));
+
+export const examRequestsRelations = relations(examRequests, ({ one }) => ({
+  user: one(users, { fields: [examRequests.userId], references: [users.id] }),
+  exam: one(examinations, { fields: [examRequests.examId], references: [examinations.id] }),
+  reviewedBy: one(users, { fields: [examRequests.reviewedById], references: [users.id] }),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({

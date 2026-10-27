@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext.tsx';
 import api from '../lib/api.ts';
 import { FacultyDashboardData } from '../types.ts';
 import {
-  Users, BookOpen, FileSpreadsheet, CheckCircle2, Trophy, Clock, AlertCircle, PlusCircle, RefreshCw, BarChart2
+  Users, BookOpen, FileSpreadsheet, CheckCircle2, Trophy, Clock, AlertCircle, PlusCircle, RefreshCw, BarChart2,
+  UserCheck, ShieldCheck, Upload
 } from 'lucide-react';
 
 interface FacultyAdminDashboardProps {
@@ -11,6 +12,8 @@ interface FacultyAdminDashboardProps {
   onNavigateToExams: () => void;
   onNavigateToUsers: () => void;
   onNavigateToReports: () => void;
+  onNavigateToStudents?: () => void;
+  onNavigateToClearance?: () => void;
 }
 
 export const FacultyAdminDashboard: React.FC<FacultyAdminDashboardProps> = ({
@@ -18,6 +21,8 @@ export const FacultyAdminDashboard: React.FC<FacultyAdminDashboardProps> = ({
   onNavigateToExams,
   onNavigateToUsers,
   onNavigateToReports,
+  onNavigateToStudents,
+  onNavigateToClearance,
 }) => {
   const { user } = useAuth();
   const [data, setData] = useState<FacultyDashboardData | null>(null);
@@ -78,17 +83,35 @@ export const FacultyAdminDashboard: React.FC<FacultyAdminDashboardProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2.5">
+            {onNavigateToStudents && (
+              <button
+                onClick={onNavigateToStudents}
+                className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-1.5"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Student Database (Excel)</span>
+              </button>
+            )}
+            {onNavigateToClearance && (
+              <button
+                onClick={onNavigateToClearance}
+                className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-1.5"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Exam Approvals</span>
+              </button>
+            )}
             <button
               onClick={onNavigateToQuestions}
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow-md shadow-blue-100 transition flex items-center space-x-1.5"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-1.5"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 text-blue-700" />
               <span>Add Question</span>
             </button>
             <button
               onClick={onNavigateToExams}
-              className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-1.5"
+              className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-1.5"
             >
               <BookOpen className="w-4 h-4 text-blue-700" />
               <span>Create Mock Exam</span>

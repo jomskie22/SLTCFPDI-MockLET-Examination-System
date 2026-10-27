@@ -32,6 +32,7 @@ export const ExamManager: React.FC<ExamManagerProps> = ({ onTakeExam }) => {
 
   const [saving, setSaving] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [blockedModalOpen, setBlockedModalOpen] = useState<boolean>(false);
 
   const fetchExams = async () => {
     setLoading(true);
@@ -250,6 +251,19 @@ export const ExamManager: React.FC<ExamManagerProps> = ({ onTakeExam }) => {
                         <span>Retake Examination</span>
                       </button>
                     </div>
+                  ) : exam.isApprovedForMockExam === false ? (
+                    <div className="w-full space-y-1.5">
+                      <div className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2.5 py-1 rounded border border-amber-200 text-center">
+                        Clearance Status: {exam.clearanceStatus || 'NOT_REQUESTED'}
+                      </div>
+                      <button
+                        onClick={() => setBlockedModalOpen(true)}
+                        className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center justify-center space-x-2"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Clearance Approval Required</span>
+                      </button>
+                    </div>
                   ) : (
                     <button
                       onClick={() => onTakeExam(exam.id)}
@@ -424,6 +438,34 @@ export const ExamManager: React.FC<ExamManagerProps> = ({ onTakeExam }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Clearance Warning Modal */}
+      {blockedModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center space-y-3">
+            <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto">
+              <Shield className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-base font-bold text-slate-900">MockLET Clearance Required</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Official policy requires all examinees to have an <span className="font-bold text-emerald-700">APPROVED</span> clearance status from the Administrator before taking mock examinations.
+            </p>
+            <p className="text-[11px] text-slate-500">
+              Please go to your <span className="font-semibold text-slate-700">Examinee Dashboard</span> to submit or track your clearance request status.
+            </p>
+
+            <div className="flex justify-center space-x-2 pt-2">
+              <button
+                onClick={() => setBlockedModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200"
+              >
+                Understood
+              </button>
+            </div>
           </div>
         </div>
       )}

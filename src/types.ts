@@ -139,3 +139,71 @@ export interface FacultyDashboardData {
   recentAttempts: any[];
   recentLogs: any[];
 }
+
+export interface StudentMasterlistRecord {
+  id: number;
+  studentId: string;
+  lastName: string;
+  firstName: string;
+  middleName?: string | null;
+  course: string;
+  yearGraduated: string;
+  createdAt: string;
+  updatedAt?: string;
+  uploadedById?: number | null;
+  uploadedByName?: string | null;
+  uploadedByRole?: string | null;
+}
+
+export interface ExamRequestRecord {
+  id: number;
+  userId: number;
+  studentId: string;
+  examId?: number | null;
+  status: 'PENDING' | 'APPROVED' | 'DECLINED';
+  requestNotes?: string | null;
+  reviewNotes?: string | null;
+  requestedAt: string;
+  reviewedAt?: string | null;
+  reviewedById?: number | null;
+  reviewerName?: string | null;
+  userName?: string | null;
+  userEmail?: string | null;
+  examTitle?: string | null;
+  fullName?: string | null;
+  course?: string | null;
+  yearGraduated?: string | null;
+}
+
+export interface ExamineeClearanceStatus {
+  hasRequest: boolean;
+  isApproved: boolean;
+  isPending: boolean;
+  isDeclined: boolean;
+  status: 'APPROVED' | 'PENDING' | 'DECLINED' | 'NOT_REQUESTED';
+  latestRequest?: ExamRequestRecord | null;
+  allRequests: ExamRequestRecord[];
+  verifiedStudent?: {
+    studentId: string;
+    fullName: string;
+    course: string;
+    yearGraduated: string;
+  } | null;
+}
+
+export interface ExamineeLoginResult {
+  approved: boolean;
+  status: 'APPROVED' | 'PENDING' | 'DECLINED';
+  token?: string;
+  user?: User;
+  student: {
+    studentId: string;
+    fullName: string;
+    course: string;
+    yearGraduated: string;
+  };
+  message: string;
+  reviewNotes?: string | null;
+  requestedAt?: string;
+}
+

@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { db } from '../db/index.ts';
-import { examinations, examQuestions, questions, questionChoices, examAttempts, examineeAnswers, categories, users, auditLogs } from '../db/schema.ts';
+import { examinations, examQuestions, questions, questionChoices, examAttempts, examineeAnswers, categories, users, auditLogs, examRequests } from '../db/schema.ts';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 
@@ -33,11 +33,19 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 
     const filtered = isStaff ? allExams : allExams.filter(e => e.isPublished);
 
-    // If examinee, attach their previous attempt status
+    // If examinee, attach their previous attempt status & admin approval status
     if (!isStaff && req.user?.id) {
       const userAttempts = await db.select()
         .from(examAttempts)
         .where(eq(examAttempts.userId, req.user.id));
+
+      const userRequests = await db.select()
+        .from(examRequests)
+        .where(eq(examRequests.userId, req.user.id));
+
+      const isApproved = userRequests.some(r => r.status === 'APPROVED');
+      const latestReq = userRequests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())[0];
+      const clearanceStatus = isApproved ? 'APPROVED' : latestReq ? latestReq.status : 'NOT_REQUESTED';
 
       const enriched = filtered.map(exam => {
         const attemptsForExam = userAttempts.filter(a => a.examId === exam.id);
@@ -54,6 +62,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
           canRetake: !hasTaken || retakeGranted,
           retakeGranted: retakeGranted,
           lastStatus: latestAttempt ? latestAttempt.status : null,
+          isApprovedForMockExam: isApproved,
+          clearanceStatus,
         };
       });
       return res.json(enriched);
@@ -203,8 +213,30 @@ router.post('/:id/start', requireAuth, async (req: AuthRequest, res: Response) =
       return res.status(403).json({ error: 'This examination is currently not available or published' });
     }
 
-    // Check if examinee has already taken this exam and if retake is permitted
+    // Check if examinee is approved by Admin to take MockLET examinations
     if (req.user?.role === 'EXAMINEE') {
+      const userRequests = await db.select()
+        .from(examRequests)
+        .where(eq(examRequests.userId, userId));
+
+      const isApproved = userRequests.some(r => r.status === 'APPROVED');
+      const latestReq = userRequests.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())[0];
+
+      if (!isApproved) {
+        const statusMsg = !latestReq
+          ? 'You must first submit a "Request to Take the MockLET Examination" and be approved by the Administrator.'
+          : latestReq.status === 'PENDING'
+          ? 'Your examination clearance request is currently PENDING Administrator review.'
+          : `Your examination clearance request was DECLINED. Reason: ${latestReq.reviewNotes || 'Not cleared'}`;
+
+        return res.status(403).json({
+          error: `MockLET Access Blocked: ${statusMsg}`,
+          approvalRequired: true,
+          clearanceStatus: latestReq ? latestReq.status : 'NOT_REQUESTED',
+        });
+      }
+
+      // Check if examinee has already taken this exam and if retake is permitted
       const priorAttempts = await db.select()
         .from(examAttempts)
         .where(and(eq(examAttempts.examId, examId), eq(examAttempts.userId, userId)));

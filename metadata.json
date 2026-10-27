@@ -1,0 +1,6 @@
+{
+  "name": "SLTCFPDI Automated LET Mock Examination",
+  "description": "Online Web-Based LET Mock Examination and Examinee Performance Monitoring System for Southern Luzon Technological College Foundation Pio Duran Incorporated",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
